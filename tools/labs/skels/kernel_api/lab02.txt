@@ -1,0 +1,6 @@
+1. Se suprascrie bufferul in care puneam "chars: " cu Z-uri.
+
+2. BUG: scheduling while atomic: insmod/236/0x00000002
+- obs ca nu putem face scheduling in zona atomica.
+
+3.
