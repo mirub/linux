@@ -1,0 +1,17 @@
+1. Am inserat si sters modulul din kernel.
+
+2. Am modificat log level in /proc/sys/kernel/printk.
+
+3. Am inserat headerul lipsa.
+
+4. Am adaugat regula multi-object in kbuild.
+
+5. BUG: kernel NULL pointer dereference, address: 00000000
+#PF: supervisor write access in kernel mode
+#PF: error_code(0x0002) - not-present page
+*pde = 00000000 
+Oops: 0002 [#1] SMP
+
+6. insmod cmd_mod.ko str="tired"
+
+7. Am adaugat headerul necesar si am printat detaliile proceselor.
