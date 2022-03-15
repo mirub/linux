@@ -55,5 +55,3 @@ after removing expired: [
 si am decomentat codul. Initial nu mergea, aparea eroarea 
 "list_test: Unknown symbol task_info_remove_expired (err -2)", dar dupa mi-am
 dat seama ca era necesar sa dau insmod si pe modulul de la ex6.
-
-
