@@ -8,10 +8,13 @@
 #include <linux/slab.h>
 #include <linux/sched.h>
 #include <linux/sched/signal.h>
+#include <linux/jiffies.h>
 
 MODULE_DESCRIPTION("Memory processing");
 MODULE_AUTHOR("SO2");
 MODULE_LICENSE("GPL");
+
+extern unsigned long volatile jiffies;
 
 struct task_info {
 	pid_t pid;
@@ -26,18 +29,31 @@ static struct task_info *task_info_alloc(int pid)
 
 	/* TODO 1: allocated and initialize a task_info struct */
 
+	ti = kmalloc(sizeof(*ti), GFP_KERNEL);
+	if (!ti) {
+		pr_info("Could not allocate ti!");
+		return NULL;
+	}
+
+	ti->pid = pid;
+	ti->timestamp = jiffies;
+
 	return ti;
 }
 
 static int memory_init(void)
 {
 	/* TODO 2: call task_info_alloc for current pid */
+	ti1 = task_info_alloc(current->pid);
 
 	/* TODO 2: call task_info_alloc for parent PID */
+	ti2 = task_info_alloc(current->parent->pid);
 
 	/* TODO 2: call task_info alloc for next process PID */
+	ti3 = task_info_alloc(next_task(current)->pid);
 
 	/* TODO 2: call task_info_alloc for next process of the next process */
+	ti4 = task_info_alloc(next_task(next_task(current))->pid);
 
 	return 0;
 }
@@ -46,8 +62,18 @@ static void memory_exit(void)
 {
 
 	/* TODO 3: print ti* field values */
+	printk("ti1: \n pid: %d, timestamp: %lu\n", ti1->pid, ti1->timestamp);
+	printk("ti2: \n pid: %d, timestamp: %lu\n", ti2->pid, ti2->timestamp);
+	printk("ti3: \n pid: %d, timestamp: %lu\n", ti3->pid, ti3->timestamp);
+	printk("ti4: \n pid: %d, timestamp: %lu\n", ti4->pid, ti4->timestamp);
+
 
 	/* TODO 4: free ti* structures */
+	kfree(ti1);
+	kfree(ti2);
+	kfree(ti3);
+	kfree(ti4);
+
 }
 
 module_init(memory_init);
