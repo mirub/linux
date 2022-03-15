@@ -16,4 +16,44 @@ before exiting: [
 (234, 4294942898)                                                
 ]    
 
-5. 
+5. Am cautat entry-ul cu pid-ul dat in lista. Am setat count la 100 pentru
+a nu expira.
+Output:
+
+root@qemux86:~/skels/kernel_api/5-list-full# insmod list-full.ko 
+list_full: loading out-of-tree module taints kernel.
+after first add: [ 
+(1, 4294912587) 
+(0, 4294912587) 
+(208, 4294912587) 
+(233, 4294912587) 
+]
+
+root@qemux86:~/skels/kernel_api/5-list-full# rmmod list-full.ko 
+after removing expired: [ 
+(1, 4294912587)
+]
+
+6. Am folosit un rwlock.
+Output:
+
+root@qemux86:~/skels/kernel_api/6-list-sync# insmod list-sync.ko 
+list_sync: loading out-of-tree module taints kernel.
+after first add: [ 
+(1, 4294908211) 
+(0, 4294908211) 
+(208, 4294908211) 
+(233, 4294908211) 
+]
+
+root@qemux86:~/skels/kernel_api/6-list-sync# rmmod list-sync.ko 
+after removing expired: [ 
+(233, 4294908211) 
+]
+
+7. Am sters din ex6 modificarea de counter (asa cum se cerea in exercitiu)
+si am decomentat codul. Initial nu mergea, aparea eroarea 
+"list_test: Unknown symbol task_info_remove_expired (err -2)", dar dupa mi-am
+dat seama ca era necesar sa dau insmod si pe modulul de la ex6.
+
+
