@@ -3,4 +3,17 @@
 2. BUG: scheduling while atomic: insmod/236/0x00000002
 - obs ca nu putem face scheduling in zona atomica.
 
-3.
+3. Am folosit kmalloc sa aloc memorie si kfree pentru dezalocare.
+Am folosit structura task_struct si current pentru pid-uri.
+
+4. Am folosit functiile din sectiunea List din lab.
+Output:
+
+root@qemux86:~/skels/kernel_api/4-list# rmmod list.ko               
+before exiting: [                                                   
+(0, 4294942898)                                                     
+(208, 4294942898)                                                   
+(234, 4294942898)                                                
+]    
+
+5. 
