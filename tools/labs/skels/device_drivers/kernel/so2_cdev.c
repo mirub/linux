@@ -21,7 +21,7 @@ MODULE_LICENSE("GPL");
 
 #define LOG_LEVEL	KERN_INFO
 
-#define MY_MAJOR		42
+#define MY_MAJOR		5
 #define MY_MINOR		0
 #define NUM_MINORS		1
 #define MODULE_NAME		"so2_cdev"
@@ -139,10 +139,18 @@ static int so2_cdev_init(void)
 	int i;
 
 	/* TODO 1: register char device region for MY_MAJOR and NUM_MINORS starting at MY_MINOR */
+	err = register_chrdev_region(MKDEV(MY_MAJOR, MY_MINOR),
+			NUM_MINORS, MODULE_NAME);
+
+	if (err != 0) {
+		pr_err("Could not register device region");
+		return err;
+	}
 
 	for (i = 0; i < NUM_MINORS; i++) {
 #ifdef EXTRA
 		/* TODO 7: extra tasks, for home */
+		
 #else
 		/*TODO 4: initialize buffer with MESSAGE string */
 #endif
@@ -163,6 +171,8 @@ static void so2_cdev_exit(void)
 	}
 
 	/* TODO 1: unregister char device region, for MY_MAJOR and NUM_MINORS starting at MY_MINOR */
+	unregister_chrdev_region(MKDEV(MY_MAJOR, MY_MINOR), NUM_MINORS);
+
 }
 
 module_init(so2_cdev_init);
