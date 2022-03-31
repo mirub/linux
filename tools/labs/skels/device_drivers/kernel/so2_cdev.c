@@ -136,6 +136,9 @@ so2_cdev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	/* TODO 6: if cmd = MY_IOCTL_PRINT, display IOCTL_MESSAGE */
+	case MY_IOCTL_PRINT:
+		printk(LOG_LEVEL "%s\n", IOCTL_MESSAGE);
+		break;
 	/* TODO 7: extra tasks, for home */
 	default:
 		ret = -EINVAL;
@@ -154,6 +157,7 @@ static const struct file_operations so2_fops = {
 /* TODO 5: add write function */
 	.write = so2_cdev_write,
 /* TODO 6: add ioctl function */
+	.unlocked_ioctl = so2_cdev_ioctl,
 };
 
 static int so2_cdev_init(void)
