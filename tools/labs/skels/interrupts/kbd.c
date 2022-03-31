@@ -29,6 +29,7 @@ MODULE_LICENSE("GPL");
 struct kbd {
 	struct cdev cdev;
 	/* TODO 3: add spinlock */
+	spinlock_t lock;
 	char buf[BUFFER_SIZE];
 	size_t put_idx, get_idx, count;
 } devs[1];
@@ -82,12 +83,22 @@ static void put_char(struct kbd *data, char c)
 static bool get_char(char *c, struct kbd *data)
 {
 	/* TODO 4: get char from buffer; update count and get_idx */
+	if (data->count > 0) {
+		*c = data->buf[data->get_idx];
+		data->get_idx = (data->get_idx + 1) % BUFFER_SIZE;
+		data->count--;
+		return true;
+	}
+
 	return false;
 }
 
 static void reset_buffer(struct kbd *data)
 {
 	/* TODO 5: reset count, put_idx, get_idx */
+	data->count = 0;
+	data->put_idx = 0;
+	data->get_idx = 0;
 }
 
 /*
@@ -97,6 +108,7 @@ static inline u8 i8042_read_data(void)
 {
 	u8 val;
 	/* TODO 3: Read DATA register (8 bits). */
+	val = inb(I8042_DATA_REG);
 	return val;
 }
 
@@ -105,6 +117,27 @@ static inline u8 i8042_read_data(void)
 	/* TODO 3: interpret the scancode */
 	/* TODO 3: display information about the keystrokes */
 	/* TODO 3: store ASCII key to buffer */
+irqreturn_t interrupt_handle(int irq_no, void *dev_id) {
+	unsigned int scancode = 0;
+	int pressed, ch;
+
+	scancode = i8042_read_data();
+	pressed = is_key_press(scancode);
+	ch = get_ascii(scancode);
+
+	pr_info("IRQ %d: scancode=0x%x (%u) pressed=%d ch=%c\n",
+		irq_no, scancode, scancode, pressed, ch);
+
+	if (pressed) {
+		struct kbd *data = (struct kbd *)dev_id;
+
+		spin_lock(&data->lock);
+		put_char(data, ch);
+		spin_unlock(&data->lock);
+	}
+
+	return IRQ_NONE;
+}
 
 static int kbd_open(struct inode *inode, struct file *file)
 {
@@ -152,10 +185,26 @@ static int kbd_init(void)
 	}
 
 	/* TODO 1: request the keyboard I/O ports */
+	if (request_region(I8042_DATA_REG+1, 1, MODULE_NAME) == NULL) {
+		err = -EBUSY;
+		goto out_unregister;
+	}
+	if (request_region(I8042_STATUS_REG+1, 1, MODULE_NAME) == NULL) {
+		err = -EBUSY;
+		goto out_unregister;
+	}
 
 	/* TODO 3: initialize spinlock */
+	spin_lock_init(&devs[0].lock);
 
 	/* TODO 2: Register IRQ handler for keyboard IRQ (IRQ 1). */
+	err = request_irq(I8042_KBD_IRQ,
+			interrupt_handle,
+			IRQF_SHARED, MODULE_NAME, &devs[0]);
+	if (err != 0) {
+		pr_err("request_irq failed: %d\n", err);
+		goto out_release_regions;
+	}
 
 	cdev_init(&devs[0].cdev, &kbd_fops);
 	cdev_add(&devs[0].cdev, MKDEV(KBD_MAJOR, KBD_MINOR), 1);
@@ -164,6 +213,9 @@ static int kbd_init(void)
 	return 0;
 
 	/*TODO 2: release regions in case of error */
+out_release_regions:
+	release_region(I8042_STATUS_REG+1, 1);
+	release_region(I8042_DATA_REG+1, 1);
 
 out_unregister:
 	unregister_chrdev_region(MKDEV(KBD_MAJOR, KBD_MINOR),
@@ -177,8 +229,11 @@ static void kbd_exit(void)
 	cdev_del(&devs[0].cdev);
 
 	/* TODO 2: Free IRQ. */
+	free_irq(I8042_KBD_IRQ, &devs[0]);
 
 	/* TODO 1: release keyboard I/O ports */
+	release_region(I8042_STATUS_REG+1, 1);
+	release_region(I8042_DATA_REG+1, 1);
 
 
 	unregister_chrdev_region(MKDEV(KBD_MAJOR, KBD_MINOR),
