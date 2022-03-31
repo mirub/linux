@@ -37,6 +37,8 @@ struct so2_device_data {
 	/* TODO 2: add cdev member */
 	struct cdev cdev;
 	/* TODO 4: add buffer with BUFSIZ elements */
+	char buffer[BUFSIZ];
+	size_t size;
 	/* TODO 7: extra members for home */
 	/* TODO 3: add atomic_t access variable to keep track if file is opened */
 	atomic_t access;
@@ -96,6 +98,10 @@ so2_cdev_read(struct file *file,
 #endif
 
 	/* TODO 4: Copy data->buffer to user_buffer, use copy_to_user */
+	to_read = (size > data->size - *offset) ? (data->size - *offset) : size;
+	if (copy_to_user(user_buffer, data->buffer + *offset, to_read) != 0)
+		return -EFAULT;
+	*offset += to_read;
 
 	return to_read;
 }
@@ -110,6 +116,11 @@ so2_cdev_write(struct file *file,
 
 
 	/* TODO 5: copy user_buffer to data->buffer, use copy_from_user */
+	size = (*offset + size > BUFSIZ) ? (BUFSIZ - *offset) : size;
+	if (copy_from_user(data->buffer + *offset, user_buffer, size) != 0)
+		return -EFAULT;
+	*offset += size;
+	data->size = *offset;
 	/* TODO 7: extra tasks for home */
 
 	return size;
@@ -139,7 +150,9 @@ static const struct file_operations so2_fops = {
 	.open = so2_cdev_open,
 	.release = so2_cdev_release,
 /* TODO 4: add read function */
+	.read = so2_cdev_read,
 /* TODO 5: add write function */
+	.write = so2_cdev_write,
 /* TODO 6: add ioctl function */
 };
 
@@ -163,6 +176,8 @@ static int so2_cdev_init(void)
 		
 #else
 		/*TODO 4: initialize buffer with MESSAGE string */
+		memcpy(devs[i].buffer, MESSAGE, sizeof(MESSAGE));
+		devs[i].size = sizeof(MESSAGE);
 #endif
 		/* TODO 7: extra tasks for home */
 		/* TODO 3: set access variable to 0, use atomic_set */
