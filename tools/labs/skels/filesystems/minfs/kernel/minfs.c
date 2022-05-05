@@ -92,21 +92,33 @@ static struct inode *minfs_iget(struct super_block *s, unsigned long ino)
 	 * the device, i.e. the block with the index 1. This is the index
 	 * to be passed to sb_bread().
 	 */
+	if (!(bh = sb_bread(s, MINFS_INODE_BLOCK)))
+		goto out_bad_sb;
 
 	/* TODO 4: Get inode with index ino from the block. */
+	mi = ((struct minfs_inode *) bh->b_data) + ino;
 
 	/* TODO 4: fill VFS inode */
+	inode->i_mode = mi->mode;
+	i_uid_write(inode, mi->uid);
+	i_gid_write(inode, mi->gid);
+	inode->i_size = mi->size;
+	inode->i_blocks = 0;
+	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
 
 	/* TODO 7: Fill address space operations (inode->i_mapping->a_ops) */
 
 	if (S_ISDIR(inode->i_mode)) {
 		/* TODO 4: Fill dir inode operations. */
+		inode->i_op = &simple_dir_inode_operations;
+		inode->i_fop = &simple_dir_operations;
 
 		/* TODO 5: Use minfs_dir_inode_operations for i_op
 		 * and minfs_dir_operations for i_fop. */
 
 		/* TODO 4: Directory inodes start off with i_nlink == 2.
 		 * (use inc_link) */
+		inc_nlink(inode);
 	}
 
 	/* TODO 7: Fill inode and file operations for regular files
@@ -120,8 +132,9 @@ static struct inode *minfs_iget(struct super_block *s, unsigned long ino)
 	//mii->data_block = mi->data_block;
 
 	/* Free resources. */
-	/* TODO 4: uncomment after the buffer_head is initialized */
-	//brelse(bh);
+	/* TODO 4: uncomment after the buffer_head is initialized */	
+	mii->data_block = mi->data_block;
+	brelse(bh);
 	unlock_new_inode(inode);
 
 	return inode;
@@ -410,6 +423,8 @@ static const struct super_operations minfs_ops = {
 	.statfs		= simple_statfs,
 	.put_super	= minfs_put_super,
 	/* TODO 4: add alloc and destroy inode functions */
+	.alloc_inode	= minfs_alloc_inode,
+	.destroy_inode	= minfs_destroy_inode,
 	/* TODO 7:	= set write_inode function. */
 };
 
