@@ -67,6 +67,10 @@ static void my_block_transfer(struct my_block_dev *dev, sector_t sector,
 		return;
 
 	/* TODO 3: read/write to dev buffer depending on dir */
+	if (dir == 1)		/* write */
+		memcpy(dev->data + offset, buffer, len);
+	else
+		memcpy(buffer, dev->data + offset, len);
 }
 
 /* to transfer data using bio structures enable USE_BIO_TRANFER */
@@ -86,20 +90,37 @@ static blk_status_t my_block_request(struct blk_mq_hw_ctx *hctx,
 	struct my_block_dev *dev = hctx->queue->queuedata;
 
 	/* TODO 2: get pointer to request */
+	rq = bd->rq;
 
 	/* TODO 2: start request processing. */
+	blk_mq_start_request(rq);
 
 	/* TODO 2: check fs request. Return if passthrough. */
+	if (blk_rq_is_passthrough(rq)) {
+		printk(KERN_NOTICE "Skip non-fs request\n");
+		blk_mq_end_request(rq, BLK_STS_IOERR);
+		goto out;
+	}
 
 	/* TODO 2: print request information */
+	printk(KERN_LOG_LEVEL
+		"request received: pos=%llu bytes=%u "
+		"cur_bytes=%u dir=%c\n",
+		(unsigned long long) blk_rq_pos(rq),
+		blk_rq_bytes(rq), blk_rq_cur_bytes(rq),
+		rq_data_dir(rq) ? 'W' : 'R');
 
 #if USE_BIO_TRANSFER == 1
 	/* TODO 6: process the request by calling my_xfer_request */
 #else
 	/* TODO 3: process the request by calling my_block_transfer */
+	my_block_transfer(dev, blk_rq_pos(rq),
+			  blk_rq_bytes(rq),
+			  bio_data(rq->bio), rq_data_dir(rq));
 #endif
 
 	/* TODO 2: end request successfully */
+	blk_mq_end_request(rq, BLK_STS_OK);
 
 out:
 	return BLK_STS_OK;
@@ -179,13 +200,24 @@ static int __init my_block_init(void)
 	int err = 0;
 
 	/* TODO 1: register block device */
+	int status;
+
+    status = register_blkdev(MY_BLOCK_MAJOR, MY_BLKDEV_NAME);
+    if (status < 0) {
+		printk(KERN_ERR "unable to register mybdev block device\n");
+		return -EBUSY;
+     }
 
 	/* TODO 2: create block device using create_block_device */
+	status = create_block_device(&g_dev);
+	if (status < 0)
+		goto out;
 
 	return 0;
 
 out:
 	/* TODO 2: unregister block device in case of an error */
+	unregister_blkdev(MY_BLOCK_MAJOR, MY_BLKDEV_NAME);
 	return err;
 }
 
@@ -207,8 +239,10 @@ static void delete_block_device(struct my_block_dev *dev)
 static void __exit my_block_exit(void)
 {
 	/* TODO 2: cleanup block device using delete_block_device */
+	delete_block_device(&g_dev);
 
 	/* TODO 1: unregister block device */
+	unregister_blkdev(MY_BLOCK_MAJOR, MY_BLKDEV_NAME);
 }
 
 module_init(my_block_init);
