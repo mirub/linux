@@ -46,6 +46,11 @@ static int test_daddr(unsigned int dst_addr)
 	 * *and* matches dst_addr
 	 */
 
+	if (atomic_read(&ioctl_set) == 1)
+		ret = (ioctl_set_addr == dst_addr);
+	else
+		ret = 1;
+
 	return ret;
 }
 
@@ -82,6 +87,10 @@ static long my_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case MY_IOCTL_FILTER_ADDRESS:
 		/* TODO 2: set filter address from arg */
+		if (copy_from_user(&ioctl_set_addr, (void *) arg,
+					sizeof(ioctl_set_addr)))
+			return -EFAULT;
+		atomic_set(&ioctl_set, 1);
 		break;
 
 	default:
